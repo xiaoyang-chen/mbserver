@@ -31,6 +31,7 @@ func TestAduSetDataWithRegisterAndNumberAndValues(t *testing.T) {
 
 func TestUnsupportedFunction(t *testing.T) {
 	s := NewServer(NewMemorySlaveUint8(1))
+	s.Debug = true
 	var frame TCPFrame
 	frame.Function = 255
 
