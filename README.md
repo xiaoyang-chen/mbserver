@@ -1,3 +1,5 @@
+base version from master branch of https://github.com/tbrandon/mbserver, commit hash: 36eb59221ac288def3d66c9e30d7741fc05db80f, support multi slaves
+
 [![Build Status](https://travis-ci.org/tbrandon/mbserver.svg?branch=master)](https://travis-ci.org/tbrandon/mbserver)
 [![Coverage Status](http://codecov.io/github/tbrandon/mbserver/coverage.svg?branch=master)](http://codecov.io/github/tbrandon/mbserver?branch=master)
 [![GoDoc](https://godoc.org/github.com/tbrandon/mbserver?status.svg)](https://godoc.org/github.com/tbrandon/mbserver)

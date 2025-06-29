@@ -1,8 +1,6 @@
 package mbserver
 
-import (
-	"encoding/binary"
-)
+import "encoding/binary"
 
 // ReadCoils function 1, reads coils from internal memory.
 func ReadCoils(s *Server, frame Framer) ([]byte, *Exception) {
@@ -16,7 +14,9 @@ func ReadCoils(s *Server, frame Framer) ([]byte, *Exception) {
 	}
 	data := make([]byte, 1+dataSize)
 	data[0] = byte(dataSize)
-	for i, value := range s.Coils[register:endRegister] {
+
+	coils := s.Coils(frame.Addr())
+	for i, value := range coils[register:endRegister] {
 		if value != 0 {
 			shift := uint(i) % 8
 			data[1+i/8] |= byte(1 << shift)
@@ -37,7 +37,9 @@ func ReadDiscreteInputs(s *Server, frame Framer) ([]byte, *Exception) {
 	}
 	data := make([]byte, 1+dataSize)
 	data[0] = byte(dataSize)
-	for i, value := range s.DiscreteInputs[register:endRegister] {
+
+	discreteInputs := s.DiscreteInputs(frame.Addr())
+	for i, value := range discreteInputs[register:endRegister] {
 		if value != 0 {
 			shift := uint(i) % 8
 			data[1+i/8] |= byte(1 << shift)
@@ -52,7 +54,9 @@ func ReadHoldingRegisters(s *Server, frame Framer) ([]byte, *Exception) {
 	if endRegister > 65536 {
 		return []byte{}, &IllegalDataAddress
 	}
-	return append([]byte{byte(numRegs * 2)}, Uint16ToBytes(s.HoldingRegisters[register:endRegister])...), &Success
+
+	holdingRegisters := s.HoldingRegisters(frame.Addr())
+	return append([]byte{byte(numRegs * 2)}, Uint16ToBytes(holdingRegisters[register:endRegister])...), &Success
 }
 
 // ReadInputRegisters function 4, reads input registers from internal memory.
@@ -61,7 +65,9 @@ func ReadInputRegisters(s *Server, frame Framer) ([]byte, *Exception) {
 	if endRegister > 65536 {
 		return []byte{}, &IllegalDataAddress
 	}
-	return append([]byte{byte(numRegs * 2)}, Uint16ToBytes(s.InputRegisters[register:endRegister])...), &Success
+
+	inputRegisters := s.InputRegisters(frame.Addr())
+	return append([]byte{byte(numRegs * 2)}, Uint16ToBytes(inputRegisters[register:endRegister])...), &Success
 }
 
 // WriteSingleCoil function 5, write a coil to internal memory.
@@ -71,14 +77,22 @@ func WriteSingleCoil(s *Server, frame Framer) ([]byte, *Exception) {
 	if value != 0 {
 		value = 1
 	}
-	s.Coils[register] = byte(value)
+
+	coils := s.Coils(frame.Addr())
+	coils[register] = byte(value)
+	s.SaveCoils(frame.Addr(), coils)
+
 	return frame.GetData()[0:4], &Success
 }
 
 // WriteHoldingRegister function 6, write a holding register to internal memory.
 func WriteHoldingRegister(s *Server, frame Framer) ([]byte, *Exception) {
 	register, value := registerAddressAndValue(frame)
-	s.HoldingRegisters[register] = value
+
+	holdingRegisters := s.HoldingRegisters(frame.Addr())
+	holdingRegisters[register] = value
+	s.SaveHoldingRegisters(frame.Addr(), holdingRegisters)
+
 	return frame.GetData()[0:4], &Success
 }
 
@@ -96,10 +110,11 @@ func WriteMultipleCoils(s *Server, frame Framer) ([]byte, *Exception) {
 	//	return []byte{}, &IllegalDataAddress
 	//}
 
+	coils := s.Coils(frame.Addr())
 	bitCount := 0
 	for i, value := range valueBytes {
 		for bitPos := uint(0); bitPos < 8; bitPos++ {
-			s.Coils[register+(i*8)+int(bitPos)] = bitAtPosition(value, bitPos)
+			coils[register+(i*8)+int(bitPos)] = bitAtPosition(value, bitPos)
 			bitCount++
 			if bitCount >= numRegs {
 				break
@@ -109,6 +124,8 @@ func WriteMultipleCoils(s *Server, frame Framer) ([]byte, *Exception) {
 			break
 		}
 	}
+
+	s.SaveCoils(frame.Addr(), coils)
 
 	return frame.GetData()[0:4], &Success
 }
@@ -124,15 +141,19 @@ func WriteHoldingRegisters(s *Server, frame Framer) ([]byte, *Exception) {
 		exception = &IllegalDataAddress
 	}
 
+	holdingRegisters := s.HoldingRegisters(frame.Addr())
+
 	// Copy data to memroy
 	values := BytesToUint16(valueBytes)
-	valuesUpdated := copy(s.HoldingRegisters[register:], values)
+	valuesUpdated := copy(holdingRegisters[register:], values)
 	if valuesUpdated == numRegs {
 		exception = &Success
 		data = frame.GetData()[0:4]
 	} else {
 		exception = &IllegalDataAddress
 	}
+
+	s.SaveHoldingRegisters(frame.Addr(), holdingRegisters)
 
 	return data, exception
 }
@@ -159,4 +180,13 @@ func Uint16ToBytes(values []uint16) []byte {
 
 func bitAtPosition(value uint8, pos uint) uint8 {
 	return (value >> pos) & 0x01
+}
+
+func SlaveOperate(fn func(*Server, Framer) ([]byte, *Exception)) func(*Server, Framer) ([]byte, *Exception) {
+	return func(s *Server, f Framer) ([]byte, *Exception) {
+		if !s.IsSlaveIdValid(f.Addr()) {
+			return f.GetData(), &GatewayPathUnavailable
+		}
+		return fn(s, f)
+	}
 }

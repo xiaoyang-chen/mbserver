@@ -30,7 +30,7 @@ func TestAduSetDataWithRegisterAndNumberAndValues(t *testing.T) {
 }
 
 func TestUnsupportedFunction(t *testing.T) {
-	s := NewServer()
+	s := NewServer(NewMemorySlaveUint8(1))
 	var frame TCPFrame
 	frame.Function = 255
 
@@ -45,7 +45,7 @@ func TestUnsupportedFunction(t *testing.T) {
 
 func TestModbus(t *testing.T) {
 	// Server
-	s := NewServer()
+	s := NewServer(NewMemorySlaveUint8(1))
 	err := s.ListenTCP("127.0.0.1:3333")
 	if err != nil {
 		t.Fatalf("failed to listen, got %v\n", err)
@@ -69,6 +69,7 @@ func TestModbus(t *testing.T) {
 	// Coils
 	results, err := client.WriteMultipleCoils(100, 9, []byte{255, 1})
 	if err != nil {
+		t.Log(results)
 		t.Errorf("expected nil, got %v\n", err)
 		t.FailNow()
 	}
@@ -123,8 +124,10 @@ func TestModbus(t *testing.T) {
 	}
 
 	// Input registers
-	s.InputRegisters[65530] = 1
-	s.InputRegisters[65535] = 65535
+	inputRegisters := s.InputRegisters(1)
+	inputRegisters[65530] = 1
+	inputRegisters[65535] = 65535
+	s.SaveInputRegisters(1, inputRegisters)
 	results, err = client.ReadInputRegisters(65530, 6)
 	if err != nil {
 		t.Errorf("expected nil, got %v\n", err)

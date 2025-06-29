@@ -3,6 +3,7 @@ package mbserver
 
 import (
 	"io"
+	"log"
 	"net"
 	"sync"
 
@@ -12,17 +13,18 @@ import (
 // Server is a Modbus slave with allocated memory for discrete inputs, coils, etc.
 type Server struct {
 	// Debug enables more verbose messaging.
-	Debug            bool
-	listeners        []net.Listener
-	ports            []serial.Port
-	portsWG          sync.WaitGroup
-	portsCloseChan   chan struct{}
-	requestChan      chan *Request
-	function         [256](func(*Server, Framer) ([]byte, *Exception))
-	DiscreteInputs   []byte
-	Coils            []byte
-	HoldingRegisters []uint16
-	InputRegisters   []uint16
+	Debug          bool
+	listeners      []net.Listener
+	ports          []serial.Port
+	portsWG        sync.WaitGroup
+	portsCloseChan chan struct{}
+	requestChan    chan *Request
+	function       [256](func(*Server, Framer) ([]byte, *Exception))
+	// DiscreteInputs   []byte
+	// Coils            []byte
+	// HoldingRegisters []uint16
+	// InputRegisters   []uint16
+	Slaver
 }
 
 // Request contains the connection and Modbus frame.
@@ -32,24 +34,24 @@ type Request struct {
 }
 
 // NewServer creates a new Modbus server (slave).
-func NewServer() *Server {
-	s := &Server{}
+func NewServer(slaver Slaver) *Server {
 
+	var s = &Server{Slaver: slaver}
 	// Allocate Modbus memory maps.
-	s.DiscreteInputs = make([]byte, 65536)
-	s.Coils = make([]byte, 65536)
-	s.HoldingRegisters = make([]uint16, 65536)
-	s.InputRegisters = make([]uint16, 65536)
+	// s.DiscreteInputs = make([]byte, 65536)
+	// s.Coils = make([]byte, 65536)
+	// s.HoldingRegisters = make([]uint16, 65536)
+	// s.InputRegisters = make([]uint16, 65536)
 
 	// Add default functions.
-	s.function[1] = ReadCoils
-	s.function[2] = ReadDiscreteInputs
-	s.function[3] = ReadHoldingRegisters
-	s.function[4] = ReadInputRegisters
-	s.function[5] = WriteSingleCoil
-	s.function[6] = WriteHoldingRegister
-	s.function[15] = WriteMultipleCoils
-	s.function[16] = WriteHoldingRegisters
+	s.function[1] = SlaveOperate(ReadCoils)
+	s.function[2] = SlaveOperate(ReadDiscreteInputs)
+	s.function[3] = SlaveOperate(ReadHoldingRegisters)
+	s.function[4] = SlaveOperate(ReadInputRegisters)
+	s.function[5] = SlaveOperate(WriteSingleCoil)
+	s.function[6] = SlaveOperate(WriteHoldingRegister)
+	s.function[15] = SlaveOperate(WriteMultipleCoils)
+	s.function[16] = SlaveOperate(WriteHoldingRegisters)
 
 	s.requestChan = make(chan *Request)
 	s.portsCloseChan = make(chan struct{})
@@ -72,6 +74,7 @@ func (s *Server) handle(request *Request) Framer {
 
 	function := request.frame.GetFunction()
 	if s.function[function] != nil {
+		request.frame.Bytes()
 		data, exception = s.function[function](s, request.frame)
 		response.SetData(data)
 	} else {
@@ -81,7 +84,10 @@ func (s *Server) handle(request *Request) Framer {
 	if exception != &Success {
 		response.SetException(exception)
 	}
-
+	// debug
+	if s.Debug {
+		log.Printf("request frame 0x: % x; response frame 0x: % x\n", request.frame.Bytes(), response.Bytes())
+	}
 	return response
 }
 

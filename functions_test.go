@@ -8,20 +8,19 @@ import (
 func isEqual(a interface{}, b interface{}) bool {
 	expect, _ := json.Marshal(a)
 	got, _ := json.Marshal(b)
-	if string(expect) != string(got) {
-		return false
-	}
-	return true
+	return string(expect) == string(got)
 }
 
 // Function 1
 func TestReadCoils(t *testing.T) {
-	s := NewServer()
+	s := NewServer(NewMemorySlaveUint8(1))
 	// Set the coil values
-	s.Coils[10] = 1
-	s.Coils[11] = 1
-	s.Coils[17] = 1
-	s.Coils[18] = 1
+	coils := s.Coils(1)
+	coils[10] = 1
+	coils[11] = 1
+	coils[17] = 1
+	coils[18] = 1
+	s.SaveCoils(1, coils)
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -50,12 +49,14 @@ func TestReadCoils(t *testing.T) {
 
 // Function 2
 func TestReadDiscreteInputs(t *testing.T) {
-	s := NewServer()
+	s := NewServer(NewMemorySlaveUint8(1))
 	// Set the discrete input values
-	s.DiscreteInputs[0] = 1
-	s.DiscreteInputs[7] = 1
-	s.DiscreteInputs[8] = 1
-	s.DiscreteInputs[9] = 1
+	discreteInputs := s.DiscreteInputs(1)
+	discreteInputs[0] = 1
+	discreteInputs[7] = 1
+	discreteInputs[8] = 1
+	discreteInputs[9] = 1
+	s.SaveDiscreteInputs(1, discreteInputs)
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -83,10 +84,12 @@ func TestReadDiscreteInputs(t *testing.T) {
 
 // Function 3
 func TestReadHoldingRegisters(t *testing.T) {
-	s := NewServer()
-	s.HoldingRegisters[100] = 1
-	s.HoldingRegisters[101] = 2
-	s.HoldingRegisters[102] = 65535
+	s := NewServer(NewMemorySlaveUint8(1))
+	holdingRegisters := s.HoldingRegisters(1)
+	holdingRegisters[100] = 1
+	holdingRegisters[101] = 2
+	holdingRegisters[102] = 65535
+	s.SaveHoldingRegisters(1, holdingRegisters)
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -113,10 +116,12 @@ func TestReadHoldingRegisters(t *testing.T) {
 
 // Function 4
 func TestReadInputRegisters(t *testing.T) {
-	s := NewServer()
-	s.InputRegisters[200] = 1
-	s.InputRegisters[201] = 2
-	s.InputRegisters[202] = 65535
+	s := NewServer(NewMemorySlaveUint8(1))
+	inputRegisters := s.InputRegisters(1)
+	inputRegisters[200] = 1
+	inputRegisters[201] = 2
+	inputRegisters[202] = 65535
+	s.SaveInputRegisters(1, inputRegisters)
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -143,7 +148,7 @@ func TestReadInputRegisters(t *testing.T) {
 
 // Function 5
 func TestWriteSingleCoil(t *testing.T) {
-	s := NewServer()
+	s := NewServer(NewMemorySlaveUint8(1))
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -162,7 +167,7 @@ func TestWriteSingleCoil(t *testing.T) {
 		t.FailNow()
 	}
 	expect := 1
-	got := s.Coils[65535]
+	got := s.Coils(1)[65535]
 	if !isEqual(expect, got) {
 		t.Errorf("expected %v, got %v\n", expect, got)
 	}
@@ -170,7 +175,7 @@ func TestWriteSingleCoil(t *testing.T) {
 
 // Function 6
 func TestWriteHoldingRegister(t *testing.T) {
-	s := NewServer()
+	s := NewServer(NewMemorySlaveUint8(1))
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -189,7 +194,7 @@ func TestWriteHoldingRegister(t *testing.T) {
 		t.FailNow()
 	}
 	expect := 6
-	got := s.HoldingRegisters[5]
+	got := s.HoldingRegisters(1)[5]
 	if !isEqual(expect, got) {
 		t.Errorf("expected %v, got %v\n", expect, got)
 	}
@@ -197,7 +202,7 @@ func TestWriteHoldingRegister(t *testing.T) {
 
 // Function 15
 func TestWriteMultipleCoils(t *testing.T) {
-	s := NewServer()
+	s := NewServer(NewMemorySlaveUint8(1))
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -216,7 +221,7 @@ func TestWriteMultipleCoils(t *testing.T) {
 		t.FailNow()
 	}
 	expect := []byte{1, 1}
-	got := s.Coils[1:3]
+	got := s.Coils(1)[1:3]
 	if !isEqual(expect, got) {
 		t.Errorf("expected %v, got %v\n", expect, got)
 	}
@@ -224,7 +229,7 @@ func TestWriteMultipleCoils(t *testing.T) {
 
 // Function 16
 func TestWriteHoldingRegisters(t *testing.T) {
-	s := NewServer()
+	s := NewServer(NewMemorySlaveUint8(1))
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -243,7 +248,7 @@ func TestWriteHoldingRegisters(t *testing.T) {
 		t.FailNow()
 	}
 	expect := []uint16{3, 4}
-	got := s.HoldingRegisters[1:3]
+	got := s.HoldingRegisters(1)[1:3]
 	if !isEqual(expect, got) {
 		t.Errorf("expected %v, got %v\n", expect, got)
 	}
@@ -268,7 +273,7 @@ func TestUint16ToBytes(t *testing.T) {
 }
 
 func TestOutOfBounds(t *testing.T) {
-	s := NewServer()
+	s := NewServer(NewMemorySlaveUint8(1))
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
