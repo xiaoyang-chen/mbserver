@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/goburrow/serial"
+	"github.com/pkg/errors"
 )
 
 // ListenRTU starts the Modbus server listening to a serial device.
@@ -12,7 +13,7 @@ import (
 func (s *Server) ListenRTU(serialConfig *serial.Config) (err error) {
 	port, err := serial.Open(serialConfig)
 	if err != nil {
-		log.Fatalf("failed to open %s: %s\n", serialConfig.Address, err.Error())
+		log.Fatalf("failed to open %s: %s\n", serialConfig.Address, errors.WithStack(err).Error())
 	}
 	s.ports = append(s.ports, port)
 
@@ -39,7 +40,7 @@ SkipFrameError:
 		bytesRead, err := port.Read(buffer)
 		if err != nil {
 			if err != io.EOF {
-				log.Printf("serial read error %s\n", err.Error())
+				log.Printf("serial read error %s\n", errors.WithStack(err).Error())
 			}
 			return
 		}

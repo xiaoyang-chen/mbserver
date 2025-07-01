@@ -6,6 +6,8 @@ import (
 	"log"
 	"net"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 func (s *Server) accept(listen net.Listener) error {
@@ -15,6 +17,7 @@ func (s *Server) accept(listen net.Listener) error {
 			if strings.Contains(err.Error(), "use of closed network connection") {
 				return nil
 			}
+			err = errors.WithStack(err)
 			log.Printf("Unable to accept connections: %s\n", err.Error())
 			return err
 		}
@@ -27,7 +30,7 @@ func (s *Server) accept(listen net.Listener) error {
 				bytesRead, err := conn.Read(packet)
 				if err != nil {
 					if err != io.EOF {
-						log.Printf("read error: %s\n", err.Error())
+						log.Printf("read error: %s\n", errors.WithStack(err).Error())
 					}
 					return
 				}
@@ -52,6 +55,7 @@ func (s *Server) accept(listen net.Listener) error {
 func (s *Server) ListenTCP(addressPort string) (err error) {
 	listen, err := net.Listen("tcp", addressPort)
 	if err != nil {
+		err = errors.WithStack(err)
 		log.Printf("Failed to Listen: %s\n", err.Error())
 		return err
 	}
@@ -64,6 +68,7 @@ func (s *Server) ListenTCP(addressPort string) (err error) {
 func (s *Server) ListenTLS(addressPort string, config *tls.Config) (err error) {
 	listen, err := tls.Listen("tcp", addressPort, config)
 	if err != nil {
+		err = errors.WithStack(err)
 		log.Printf("Failed to Listen on TLS: %s\n", err.Error())
 		return err
 	}

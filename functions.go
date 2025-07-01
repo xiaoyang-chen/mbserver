@@ -1,6 +1,9 @@
 package mbserver
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"log"
+)
 
 // ReadCoils function 1, reads coils from internal memory.
 func ReadCoils(s *Server, frame Framer) ([]byte, *Exception) {
@@ -15,7 +18,11 @@ func ReadCoils(s *Server, frame Framer) ([]byte, *Exception) {
 	data := make([]byte, 1+dataSize)
 	data[0] = byte(dataSize)
 
-	coils := s.Coils(frame.Addr())
+	coils, err := s.Coils(frame.Addr())
+	if err != nil {
+		log.Printf("read slave coils fail, err: %s\n", err.Error())
+		return []byte{}, &SlaveDeviceFailure
+	}
 	for i, value := range coils[register:endRegister] {
 		if value != 0 {
 			shift := uint(i) % 8
@@ -38,7 +45,11 @@ func ReadDiscreteInputs(s *Server, frame Framer) ([]byte, *Exception) {
 	data := make([]byte, 1+dataSize)
 	data[0] = byte(dataSize)
 
-	discreteInputs := s.DiscreteInputs(frame.Addr())
+	discreteInputs, err := s.DiscreteInputs(frame.Addr())
+	if err != nil {
+		log.Printf("read slave discreteInputs fail, err: %s\n", err.Error())
+		return []byte{}, &SlaveDeviceFailure
+	}
 	for i, value := range discreteInputs[register:endRegister] {
 		if value != 0 {
 			shift := uint(i) % 8
@@ -55,7 +66,11 @@ func ReadHoldingRegisters(s *Server, frame Framer) ([]byte, *Exception) {
 		return []byte{}, &IllegalDataAddress
 	}
 
-	holdingRegisters := s.HoldingRegisters(frame.Addr())
+	holdingRegisters, err := s.HoldingRegisters(frame.Addr())
+	if err != nil {
+		log.Printf("read slave holdingRegisters fail, err: %s\n", err.Error())
+		return []byte{}, &SlaveDeviceFailure
+	}
 	return append([]byte{byte(numRegs * 2)}, Uint16ToBytes(holdingRegisters[register:endRegister])...), &Success
 }
 
@@ -66,7 +81,11 @@ func ReadInputRegisters(s *Server, frame Framer) ([]byte, *Exception) {
 		return []byte{}, &IllegalDataAddress
 	}
 
-	inputRegisters := s.InputRegisters(frame.Addr())
+	inputRegisters, err := s.InputRegisters(frame.Addr())
+	if err != nil {
+		log.Printf("read slave inputRegisters fail, err: %s\n", err.Error())
+		return []byte{}, &SlaveDeviceFailure
+	}
 	return append([]byte{byte(numRegs * 2)}, Uint16ToBytes(inputRegisters[register:endRegister])...), &Success
 }
 
@@ -78,9 +97,16 @@ func WriteSingleCoil(s *Server, frame Framer) ([]byte, *Exception) {
 		value = 1
 	}
 
-	coils := s.Coils(frame.Addr())
+	coils, err := s.Coils(frame.Addr())
+	if err != nil {
+		log.Printf("read slave coils fail, err: %s\n", err.Error())
+		return []byte{}, &SlaveDeviceFailure
+	}
 	coils[register] = byte(value)
-	s.SaveCoils(frame.Addr(), coils)
+	if err = s.SaveCoils(frame.Addr(), coils); err != nil {
+		log.Printf("write slave coils fail, err: %s\n", err.Error())
+		return []byte{}, &SlaveDeviceFailure
+	}
 
 	return frame.GetData()[0:4], &Success
 }
@@ -89,9 +115,16 @@ func WriteSingleCoil(s *Server, frame Framer) ([]byte, *Exception) {
 func WriteHoldingRegister(s *Server, frame Framer) ([]byte, *Exception) {
 	register, value := registerAddressAndValue(frame)
 
-	holdingRegisters := s.HoldingRegisters(frame.Addr())
+	holdingRegisters, err := s.HoldingRegisters(frame.Addr())
+	if err != nil {
+		log.Printf("read slave holdingRegisters fail, err: %s\n", err.Error())
+		return []byte{}, &SlaveDeviceFailure
+	}
 	holdingRegisters[register] = value
-	s.SaveHoldingRegisters(frame.Addr(), holdingRegisters)
+	if err = s.SaveHoldingRegisters(frame.Addr(), holdingRegisters); err != nil {
+		log.Printf("write slave holdingRegisters fail, err: %s\n", err.Error())
+		return []byte{}, &SlaveDeviceFailure
+	}
 
 	return frame.GetData()[0:4], &Success
 }
@@ -110,7 +143,11 @@ func WriteMultipleCoils(s *Server, frame Framer) ([]byte, *Exception) {
 	//	return []byte{}, &IllegalDataAddress
 	//}
 
-	coils := s.Coils(frame.Addr())
+	coils, err := s.Coils(frame.Addr())
+	if err != nil {
+		log.Printf("read slave coils fail, err: %s\n", err.Error())
+		return []byte{}, &SlaveDeviceFailure
+	}
 	bitCount := 0
 	for i, value := range valueBytes {
 		for bitPos := uint(0); bitPos < 8; bitPos++ {
@@ -125,7 +162,10 @@ func WriteMultipleCoils(s *Server, frame Framer) ([]byte, *Exception) {
 		}
 	}
 
-	s.SaveCoils(frame.Addr(), coils)
+	if err = s.SaveCoils(frame.Addr(), coils); err != nil {
+		log.Printf("write slave coils fail, err: %s\n", err.Error())
+		return []byte{}, &SlaveDeviceFailure
+	}
 
 	return frame.GetData()[0:4], &Success
 }
@@ -141,7 +181,11 @@ func WriteHoldingRegisters(s *Server, frame Framer) ([]byte, *Exception) {
 		exception = &IllegalDataAddress
 	}
 
-	holdingRegisters := s.HoldingRegisters(frame.Addr())
+	holdingRegisters, err := s.HoldingRegisters(frame.Addr())
+	if err != nil {
+		log.Printf("read slave holdingRegisters fail, err: %s\n", err.Error())
+		return []byte{}, &SlaveDeviceFailure
+	}
 
 	// Copy data to memroy
 	values := BytesToUint16(valueBytes)
@@ -153,7 +197,10 @@ func WriteHoldingRegisters(s *Server, frame Framer) ([]byte, *Exception) {
 		exception = &IllegalDataAddress
 	}
 
-	s.SaveHoldingRegisters(frame.Addr(), holdingRegisters)
+	if err = s.SaveHoldingRegisters(frame.Addr(), holdingRegisters); err != nil {
+		log.Printf("write slave holdingRegisters fail, err: %s\n", err.Error())
+		return []byte{}, &SlaveDeviceFailure
+	}
 
 	return data, exception
 }

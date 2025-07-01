@@ -15,12 +15,19 @@ func isEqual(a interface{}, b interface{}) bool {
 func TestReadCoils(t *testing.T) {
 	s := NewServer(NewMemorySlaveUint8(1))
 	// Set the coil values
-	coils := s.Coils(1)
+	coils, err := s.Coils(1)
+	if err != nil {
+		t.Errorf("read slave coils fail, err: %s\n", err.Error())
+		t.FailNow()
+	}
 	coils[10] = 1
 	coils[11] = 1
 	coils[17] = 1
 	coils[18] = 1
-	s.SaveCoils(1, coils)
+	if err = s.SaveCoils(1, coils); err != nil {
+		t.Errorf("write slave coils fail, err: %s\n", err.Error())
+		t.FailNow()
+	}
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -51,12 +58,19 @@ func TestReadCoils(t *testing.T) {
 func TestReadDiscreteInputs(t *testing.T) {
 	s := NewServer(NewMemorySlaveUint8(1))
 	// Set the discrete input values
-	discreteInputs := s.DiscreteInputs(1)
+	discreteInputs, err := s.DiscreteInputs(1)
+	if err != nil {
+		t.Errorf("expected nil, got %v", err)
+		t.FailNow()
+	}
 	discreteInputs[0] = 1
 	discreteInputs[7] = 1
 	discreteInputs[8] = 1
 	discreteInputs[9] = 1
-	s.SaveDiscreteInputs(1, discreteInputs)
+	if err = s.SaveDiscreteInputs(1, discreteInputs); err != nil {
+		t.Errorf("expected nil, got %v", err)
+		t.FailNow()
+	}
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -85,11 +99,18 @@ func TestReadDiscreteInputs(t *testing.T) {
 // Function 3
 func TestReadHoldingRegisters(t *testing.T) {
 	s := NewServer(NewMemorySlaveUint8(1))
-	holdingRegisters := s.HoldingRegisters(1)
+	holdingRegisters, err := s.HoldingRegisters(1)
+	if err != nil {
+		t.Errorf("expected nil, got %v\n", err)
+		t.FailNow()
+	}
 	holdingRegisters[100] = 1
 	holdingRegisters[101] = 2
 	holdingRegisters[102] = 65535
-	s.SaveHoldingRegisters(1, holdingRegisters)
+	if err = s.SaveHoldingRegisters(1, holdingRegisters); err != nil {
+		t.Errorf("expected nil, got %v\n", err)
+		t.FailNow()
+	}
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -117,11 +138,18 @@ func TestReadHoldingRegisters(t *testing.T) {
 // Function 4
 func TestReadInputRegisters(t *testing.T) {
 	s := NewServer(NewMemorySlaveUint8(1))
-	inputRegisters := s.InputRegisters(1)
+	inputRegisters, err := s.InputRegisters(1)
+	if err != nil {
+		t.Errorf("expected nil, got %v\n", err)
+		t.FailNow()
+	}
 	inputRegisters[200] = 1
 	inputRegisters[201] = 2
 	inputRegisters[202] = 65535
-	s.SaveInputRegisters(1, inputRegisters)
+	if err = s.SaveInputRegisters(1, inputRegisters); err != nil {
+		t.Errorf("expected nil, got %v\n", err)
+		t.FailNow()
+	}
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -167,7 +195,12 @@ func TestWriteSingleCoil(t *testing.T) {
 		t.FailNow()
 	}
 	expect := 1
-	got := s.Coils(1)[65535]
+	bsGot, err := s.Coils(1)
+	if err != nil {
+		t.Errorf("expected nil, got %v\n", err)
+		t.FailNow()
+	}
+	got := bsGot[65535]
 	if !isEqual(expect, got) {
 		t.Errorf("expected %v, got %v\n", expect, got)
 	}
@@ -194,7 +227,12 @@ func TestWriteHoldingRegister(t *testing.T) {
 		t.FailNow()
 	}
 	expect := 6
-	got := s.HoldingRegisters(1)[5]
+	bsGot, err := s.HoldingRegisters(1)
+	if err != nil {
+		t.Errorf("expected nil, got %v\n", err)
+		t.FailNow()
+	}
+	got := bsGot[5]
 	if !isEqual(expect, got) {
 		t.Errorf("expected %v, got %v\n", expect, got)
 	}
@@ -221,7 +259,12 @@ func TestWriteMultipleCoils(t *testing.T) {
 		t.FailNow()
 	}
 	expect := []byte{1, 1}
-	got := s.Coils(1)[1:3]
+	bsGot, err := s.Coils(1)
+	if err != nil {
+		t.Errorf("expected nil, got %v\n", err)
+		t.FailNow()
+	}
+	got := bsGot[1:3]
 	if !isEqual(expect, got) {
 		t.Errorf("expected %v, got %v\n", expect, got)
 	}
@@ -248,7 +291,12 @@ func TestWriteHoldingRegisters(t *testing.T) {
 		t.FailNow()
 	}
 	expect := []uint16{3, 4}
-	got := s.HoldingRegisters(1)[1:3]
+	bsGot, err := s.HoldingRegisters(1)
+	if err != nil {
+		t.Errorf("expected nil, got %v\n", err)
+		t.FailNow()
+	}
+	got := bsGot[1:3]
 	if !isEqual(expect, got) {
 		t.Errorf("expected %v, got %v\n", expect, got)
 	}

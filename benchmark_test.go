@@ -195,7 +195,11 @@ func ExampleServer_RegisterFunctionHandler() {
 			}
 			data := make([]byte, 1+dataSize)
 			data[0] = byte(dataSize)
-			discreteInputs := s.DiscreteInputs(frame.Addr())
+			discreteInputs, err := s.DiscreteInputs(frame.Addr())
+			if err != nil {
+				log.Printf("%v\n", err)
+				return []byte{}, &SlaveDeviceFailure
+			}
 			for i := range discreteInputs[register:endRegister] {
 				// Return all 1s, regardless of the value in the DiscreteInputs array.
 				shift := uint(i) % 8

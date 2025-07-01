@@ -125,10 +125,17 @@ func TestModbus(t *testing.T) {
 	}
 
 	// Input registers
-	inputRegisters := s.InputRegisters(1)
+	inputRegisters, err := s.InputRegisters(1)
+	if err != nil {
+		t.Errorf("expected nil, got %v\n", err)
+		t.FailNow()
+	}
 	inputRegisters[65530] = 1
 	inputRegisters[65535] = 65535
-	s.SaveInputRegisters(1, inputRegisters)
+	if err = s.SaveInputRegisters(1, inputRegisters); err != nil {
+		t.Errorf("expected nil, got %v\n", err)
+		t.FailNow()
+	}
 	results, err = client.ReadInputRegisters(65530, 6)
 	if err != nil {
 		t.Errorf("expected nil, got %v\n", err)

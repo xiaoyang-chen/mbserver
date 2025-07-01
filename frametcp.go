@@ -2,7 +2,8 @@ package mbserver
 
 import (
 	"encoding/binary"
-	"errors"
+
+	"github.com/pkg/errors"
 )
 
 // TCPFrame is the Modbus TCP frame.

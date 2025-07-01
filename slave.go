@@ -5,15 +5,17 @@ import "sync"
 // id in function definition is slave id when use tcp or rtu
 type Slaver interface {
 	IsSlaveIdValid(id uint8) bool
-	DiscreteInputs(id uint8) []byte
-	Coils(id uint8) []byte
-	HoldingRegisters(id uint8) []uint16
-	InputRegisters(id uint8) []uint16
-	SaveDiscreteInputs(id uint8, b []byte)
-	SaveCoils(id uint8, b []byte)
-	SaveHoldingRegisters(id uint8, b []uint16)
-	SaveInputRegisters(id uint8, b []uint16)
+	DiscreteInputs(id uint8) ([]byte, error)
+	Coils(id uint8) ([]byte, error)
+	HoldingRegisters(id uint8) ([]uint16, error)
+	InputRegisters(id uint8) ([]uint16, error)
+	SaveDiscreteInputs(id uint8, b []byte) error
+	SaveCoils(id uint8, b []byte) error
+	SaveHoldingRegisters(id uint8, b []uint16) error
+	SaveInputRegisters(id uint8, b []uint16) error
 }
+
+var _ Slaver = new(memorySlaveUint8)
 
 type memorySlaveUint8 struct {
 	slaveNum         uint8
@@ -59,7 +61,7 @@ func NewMemorySlaveUint8(slaveNum uint8) (slaver Slaver) {
 func (s *memorySlaveUint8) IsSlaveIdValid(id uint8) bool { return id > 0 && id <= s.slaveNum }
 
 // if id not in [1, s.slaveNum], id > s.slaveNum => id will use slave ${slaveNum}, id < 1 => id will use slave 1
-func (s *memorySlaveUint8) DiscreteInputs(id uint8) (bs []byte) {
+func (s *memorySlaveUint8) DiscreteInputs(id uint8) (bs []byte, err error) {
 
 	id = s.getRealId(id)
 	s.slaveLock[id].RLock()
@@ -69,7 +71,7 @@ func (s *memorySlaveUint8) DiscreteInputs(id uint8) (bs []byte) {
 }
 
 // if id not in [1, s.slaveNum], id > s.slaveNum => id will use slave ${slaveNum}, id < 1 => id will use slave 1
-func (s *memorySlaveUint8) Coils(id uint8) (bs []byte) {
+func (s *memorySlaveUint8) Coils(id uint8) (bs []byte, err error) {
 
 	id = s.getRealId(id)
 	s.slaveLock[id].RLock()
@@ -79,7 +81,7 @@ func (s *memorySlaveUint8) Coils(id uint8) (bs []byte) {
 }
 
 // if id not in [1, s.slaveNum], id > s.slaveNum => id will use slave ${slaveNum}, id < 1 => id will use slave 1
-func (s *memorySlaveUint8) HoldingRegisters(id uint8) (bs []uint16) {
+func (s *memorySlaveUint8) HoldingRegisters(id uint8) (bs []uint16, err error) {
 
 	id = s.getRealId(id)
 	s.slaveLock[id].RLock()
@@ -89,7 +91,7 @@ func (s *memorySlaveUint8) HoldingRegisters(id uint8) (bs []uint16) {
 }
 
 // if id not in [1, s.slaveNum], id > s.slaveNum => id will use slave ${slaveNum}, id < 1 => id will use slave 1
-func (s *memorySlaveUint8) InputRegisters(id uint8) (bs []uint16) {
+func (s *memorySlaveUint8) InputRegisters(id uint8) (bs []uint16, err error) {
 
 	id = s.getRealId(id)
 	s.slaveLock[id].RLock()
@@ -99,39 +101,43 @@ func (s *memorySlaveUint8) InputRegisters(id uint8) (bs []uint16) {
 }
 
 // if id not in [1, s.slaveNum], id > s.slaveNum => id will use slave ${slaveNum}, id < 1 => id will use slave 1
-func (s *memorySlaveUint8) SaveDiscreteInputs(id uint8, b []byte) {
+func (s *memorySlaveUint8) SaveDiscreteInputs(id uint8, b []byte) (err error) {
 
 	id = s.getRealId(id)
 	s.slaveLock[id].Lock()
 	s.discreteInputs[id] = b
 	s.slaveLock[id].Unlock()
+	return
 }
 
 // if id not in [1, s.slaveNum], id > s.slaveNum => id will use slave ${slaveNum}, id < 1 => id will use slave 1
-func (s *memorySlaveUint8) SaveCoils(id uint8, b []byte) {
+func (s *memorySlaveUint8) SaveCoils(id uint8, b []byte) (err error) {
 
 	id = s.getRealId(id)
 	s.slaveLock[id].Lock()
 	s.coils[id] = b
 	s.slaveLock[id].Unlock()
+	return
 }
 
 // if id not in [1, s.slaveNum], id > s.slaveNum => id will use slave ${slaveNum}, id < 1 => id will use slave 1
-func (s *memorySlaveUint8) SaveHoldingRegisters(id uint8, b []uint16) {
+func (s *memorySlaveUint8) SaveHoldingRegisters(id uint8, b []uint16) (err error) {
 
 	id = s.getRealId(id)
 	s.slaveLock[id].Lock()
 	s.holdingRegisters[id] = b
 	s.slaveLock[id].Unlock()
+	return
 }
 
 // if id not in [1, s.slaveNum], id > s.slaveNum => id will use slave ${slaveNum}, id < 1 => id will use slave 1
-func (s *memorySlaveUint8) SaveInputRegisters(id uint8, b []uint16) {
+func (s *memorySlaveUint8) SaveInputRegisters(id uint8, b []uint16) (err error) {
 
 	id = s.getRealId(id)
 	s.slaveLock[id].Lock()
 	s.inputRegisters[id] = b
 	s.slaveLock[id].Unlock()
+	return
 }
 
 func (s *memorySlaveUint8) getRealId(id uint8) (realId uint8) {
