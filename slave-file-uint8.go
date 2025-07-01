@@ -43,12 +43,13 @@ func (s *fileSlaveUint8) DiscreteInputs(id uint8) (bs []byte, err error) {
 
 	id = s.getRealId(id)
 	s.slaveLock[id].RLock()
-	if bs, err = s.localStorageFileRead(fmt.Sprintf("%s/%d-discreteInputs", s.fileStoreDir, id)); err == nil && len(bs) < 65536 {
+	bs, err = s.localStorageFileRead(fmt.Sprintf("%s/%d-discreteInputs", s.fileStoreDir, id+1))
+	s.slaveLock[id].RUnlock()
+	if err == nil && len(bs) < 65536 {
 		var newBs = make([]byte, 65536)
 		copy(newBs, bs)
 		bs = newBs
 	}
-	s.slaveLock[id].RUnlock()
 	return
 }
 
@@ -57,12 +58,13 @@ func (s *fileSlaveUint8) Coils(id uint8) (bs []byte, err error) {
 
 	id = s.getRealId(id)
 	s.slaveLock[id].RLock()
-	if bs, err = s.localStorageFileRead(fmt.Sprintf("%s/%d-coils", s.fileStoreDir, id)); err == nil && len(bs) < 65536 {
+	bs, err = s.localStorageFileRead(fmt.Sprintf("%s/%d-coils", s.fileStoreDir, id+1))
+	s.slaveLock[id].RUnlock()
+	if err == nil && len(bs) < 65536 {
 		var newBs = make([]byte, 65536)
 		copy(newBs, bs)
 		bs = newBs
 	}
-	s.slaveLock[id].RUnlock()
 	return
 }
 
@@ -72,14 +74,15 @@ func (s *fileSlaveUint8) HoldingRegisters(id uint8) (bs []uint16, err error) {
 	id = s.getRealId(id)
 	var bsFileContent []byte
 	s.slaveLock[id].RLock()
-	if bsFileContent, err = s.localStorageFileRead(fmt.Sprintf("%s/%d-holdingRegisters", s.fileStoreDir, id)); err == nil {
+	bsFileContent, err = s.localStorageFileRead(fmt.Sprintf("%s/%d-holdingRegisters", s.fileStoreDir, id+1))
+	s.slaveLock[id].RUnlock()
+	if err == nil {
 		if bs = BytesToUint16(bsFileContent); len(bs) < 65536 {
 			var newBs = make([]uint16, 65536)
 			copy(newBs, bs)
 			bs = newBs
 		}
 	}
-	s.slaveLock[id].RUnlock()
 	return
 }
 
@@ -89,14 +92,15 @@ func (s *fileSlaveUint8) InputRegisters(id uint8) (bs []uint16, err error) {
 	id = s.getRealId(id)
 	var bsFileContent []byte
 	s.slaveLock[id].RLock()
-	if bsFileContent, err = s.localStorageFileRead(fmt.Sprintf("%s/%d-inputRegisters", s.fileStoreDir, id)); err == nil {
+	bsFileContent, err = s.localStorageFileRead(fmt.Sprintf("%s/%d-inputRegisters", s.fileStoreDir, id+1))
+	s.slaveLock[id].RUnlock()
+	if err == nil {
 		if bs = BytesToUint16(bsFileContent); len(bs) < 65536 {
 			var newBs = make([]uint16, 65536)
 			copy(newBs, bs)
 			bs = newBs
 		}
 	}
-	s.slaveLock[id].RUnlock()
 	return
 }
 
@@ -104,13 +108,8 @@ func (s *fileSlaveUint8) InputRegisters(id uint8) (bs []uint16, err error) {
 func (s *fileSlaveUint8) SaveDiscreteInputs(id uint8, b []byte) (err error) {
 
 	id = s.getRealId(id)
-	if len(b) < 65536 {
-		var newB = make([]byte, 65536)
-		copy(newB, b)
-		b = newB
-	}
 	s.slaveLock[id].Lock()
-	_, err = s.localStorageWrite(s.fileStoreDir, fmt.Sprintf("%s/%d-discreteInputs", s.fileStoreDir, id), b)
+	_, err = s.localStorageWrite(s.fileStoreDir, fmt.Sprintf("%s/%d-discreteInputs", s.fileStoreDir, id+1), b)
 	s.slaveLock[id].Unlock()
 	return
 }
@@ -119,13 +118,8 @@ func (s *fileSlaveUint8) SaveDiscreteInputs(id uint8, b []byte) (err error) {
 func (s *fileSlaveUint8) SaveCoils(id uint8, b []byte) (err error) {
 
 	id = s.getRealId(id)
-	if len(b) < 65536 {
-		var newB = make([]byte, 65536)
-		copy(newB, b)
-		b = newB
-	}
 	s.slaveLock[id].Lock()
-	_, err = s.localStorageWrite(s.fileStoreDir, fmt.Sprintf("%s/%d-coils", s.fileStoreDir, id), b)
+	_, err = s.localStorageWrite(s.fileStoreDir, fmt.Sprintf("%s/%d-coils", s.fileStoreDir, id+1), b)
 	s.slaveLock[id].Unlock()
 	return
 }
@@ -134,13 +128,8 @@ func (s *fileSlaveUint8) SaveCoils(id uint8, b []byte) (err error) {
 func (s *fileSlaveUint8) SaveHoldingRegisters(id uint8, b []uint16) (err error) {
 
 	id = s.getRealId(id)
-	if len(b) < 65536 {
-		var newB = make([]uint16, 65536)
-		copy(newB, b)
-		b = newB
-	}
 	s.slaveLock[id].Lock()
-	_, err = s.localStorageWrite(s.fileStoreDir, fmt.Sprintf("%s/%d-holdingRegisters", s.fileStoreDir, id), Uint16ToBytes(b))
+	_, err = s.localStorageWrite(s.fileStoreDir, fmt.Sprintf("%s/%d-holdingRegisters", s.fileStoreDir, id+1), Uint16ToBytes(b))
 	s.slaveLock[id].Unlock()
 	return
 }
@@ -149,13 +138,8 @@ func (s *fileSlaveUint8) SaveHoldingRegisters(id uint8, b []uint16) (err error) 
 func (s *fileSlaveUint8) SaveInputRegisters(id uint8, b []uint16) (err error) {
 
 	id = s.getRealId(id)
-	if len(b) < 65536 {
-		var newB = make([]uint16, 65536)
-		copy(newB, b)
-		b = newB
-	}
 	s.slaveLock[id].Lock()
-	_, err = s.localStorageWrite(s.fileStoreDir, fmt.Sprintf("%s/%d-inputRegisters", s.fileStoreDir, id), Uint16ToBytes(b))
+	_, err = s.localStorageWrite(s.fileStoreDir, fmt.Sprintf("%s/%d-inputRegisters", s.fileStoreDir, id+1), Uint16ToBytes(b))
 	s.slaveLock[id].Unlock()
 	return
 }
