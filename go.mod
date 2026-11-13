@@ -1,6 +1,6 @@
 module github.com/xiaoyang-chen/mbserver
 
-go 1.22.6
+go 1.26.10
 
 require (
 	github.com/goburrow/modbus v0.1.0

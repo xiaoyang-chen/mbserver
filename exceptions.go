@@ -1,6 +1,6 @@
 package mbserver
 
-import "fmt"
+import "strconv"
 
 // Exception codes.
 type Exception uint8
@@ -30,9 +30,12 @@ var (
 	GatewayTargetDeviceFailedtoRespond Exception = 11
 )
 
-func (e Exception) Error() string {
-	return fmt.Sprintf("%d", e)
-}
+// Exception implements the error interface through a pointer so that the
+// intended error type is unambiguous: only *Exception is an error.
+func (e *Exception) Error() string { return strconv.FormatInt(int64(*e), 10) }
+
+// Ensure *Exception is the error type used by this package.
+var _ error = (*Exception)(nil)
 
 func (e Exception) String() string {
 	var str string

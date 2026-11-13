@@ -31,8 +31,6 @@ func NewMemorySlaveUint8(slaveNum uint8) (slaver Slaver) {
 
 	if slaveNum < 1 {
 		slaveNum = 1
-	} else if slaveNum > 255 {
-		slaveNum = 255
 	}
 	var s = &memorySlaveUint8{
 		slaveNum:         slaveNum,

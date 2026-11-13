@@ -22,8 +22,6 @@ func NewFileSlaveUint8(slaveNum uint8, fileStoreDir string) (slaver Slaver) {
 
 	if slaveNum < 1 {
 		slaveNum = 1
-	} else if slaveNum > 255 {
-		slaveNum = 255
 	}
 	if fileStoreDir == "" {
 		fileStoreDir = "./file-slave"
